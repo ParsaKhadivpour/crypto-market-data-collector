@@ -1,15 +1,14 @@
 import time
-
 import requests
-
 from src import config
 from src.exceptions import APIConnectionError, APIResponseError
+import logging
 
+logger = logging.getLogger(__name__)
 
 def build_headers() -> dict:
     """Return the auth headers for CoinGecko."""
     return {"x-cg-demo-api-key": config.API_KEY}
-
 
 def _sleep_before_retry(
     attempt: int, reason: str, response: requests.Response | None = None
@@ -24,15 +23,15 @@ def _sleep_before_retry(
             wait = int(retry_after)
 
     wait = min(wait, config.MAX_WAIT_SECONDS)
-    # TODO (step 5): replace print with logging
-    print(f"[attempt {attempt}/{config.MAX_ATTEMPTS}] {reason}. Retrying in {wait}s...")
+    logger.warning("[attempt %d/%d] %s. Retrying in %ds...", attempt, config.MAX_ATTEMPTS,
+                   reason , wait,)
     time.sleep(wait)
-
 
 def _get_with_retries(url: str, params: dict) -> requests.Response:
     """Send a GET request, retrying temporary failures. Returns a successful response."""
     for attempt in range(1, config.MAX_ATTEMPTS + 1):
         is_last_attempt = attempt == config.MAX_ATTEMPTS
+        logger.debug("GET %s params=%s (attempt %d)",url, params, attempt)
 
         try:
             response = requests.get(
@@ -66,8 +65,12 @@ def _get_with_retries(url: str, params: dict) -> requests.Response:
                 status_code=response.status_code,
             )
 
-        return response
+        logger.debug(
+            "Response %s in %.2fs",
+            response.status_code, response.elapsed.total_seconds(),
+        )
 
+        return response
 
 def _parse_coins(response: requests.Response) -> list[dict]:
     """Decode the JSON body and check it has the shape we expect."""
@@ -80,7 +83,6 @@ def _parse_coins(response: requests.Response) -> list[dict]:
         raise APIResponseError(f"Expected a list of coins, got {type(data).__name__}")
 
     return data
-
 
 def fetch_market_data(
     per_page: int = config.COINS_PER_PAGE,
@@ -97,4 +99,6 @@ def fetch_market_data(
     }
 
     response = _get_with_retries(url, params)
-    return _parse_coins(response)
+    coins = _parse_coins(response)
+    logger.info("Fetched %d coins (currency: %s)", len(coins), vs_currency)
+    return coins

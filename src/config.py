@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from pathlib import Path
 
 load_dotenv()
 
@@ -13,6 +14,10 @@ MAX_ATTEMPTS = 3
 BACKOFF_SECONDS = 1
 MAX_WAIT_SECONDS = 60
 RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+LOG_DIR = BASE_DIR / "logs"
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 def validate_config() -> None:
     """Fail fast if a required setting is missing"""
