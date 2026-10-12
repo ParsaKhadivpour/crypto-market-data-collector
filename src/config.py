@@ -14,6 +14,7 @@ MAX_ATTEMPTS = 3
 BACKOFF_SECONDS = 1
 MAX_WAIT_SECONDS = 60
 RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+MAX_REJECTED_RATIO = float(os.getenv("MAX_REJECTED_RATIO", "0.5"))
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 LOG_DIR = BASE_DIR / "logs"
