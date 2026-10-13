@@ -7,6 +7,8 @@ from src.exceptions import CollectorError
 from src.logger import setup_logging
 from src.models import CoinRecord
 from src.validator import ensure_quality, validate_batch
+from src.cleaner import clean_batch, utc_now
+
 
 logger = logging.getLogger("main")
 
@@ -25,10 +27,11 @@ def main() -> int:
         config.validate_config()
         with CoinGeckoClient() as client:
             raw_coins = client.get_markets(per_page=5)
+        collected_at = utc_now()
 
         report = validate_batch(raw_coins)
         ensure_quality(report)
-        coins = [CoinRecord.from_api(item) for item in report.valid]
+        coins = clean_batch(report.valid,collected_at)
     except CollectorError as exc:
         logger.error("Collection failed: %s", exc)
         return 1
