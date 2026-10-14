@@ -1,60 +1,61 @@
 import logging
 import sys
+from enum import IntEnum
 
-from src import config
-from src.cleaner import clean_batch, utc_now
-from src.client import CoinGeckoClient
+from src.cli import parse_args
 from src.exceptions import CollectorError
 from src.logger import setup_logging
-from src.models import CoinRecord
-from src.storage import save_processed_csv, save_raw_json, save_rejected_json
-from src.validator import ensure_quality, validate_batch
+from src.pipeline import RunSummary, run_pipeline
 
 logger = logging.getLogger("main")
 
 
-def print_summary(coins: list[CoinRecord]) -> None:
-    """Print a one-line summary for each coin."""
-    for coin in coins:
+class ExitCode(IntEnum):
+    OK = 0
+    FAILURE = 1
+    UNEXPECTED = 3   
+
+
+def print_report(summary: RunSummary, top: int = 10) -> None:
+    """Show the result of a run to the person who started it."""
+    print(
+        f"\nCollected {summary.fetched} coins in {summary.duration_seconds:.1f}s "
+        f"({summary.valid} valid, {summary.rejected} rejected)\n"
+    )
+    for coin in summary.records[:top]:
         print(coin.summary())
 
+    if summary.dry_run:
+        print("\nDry run: no files were written.")
+        return
 
-def main() -> int:
+    print(f"\nRaw data:       {summary.raw_path}")
+    print(f"Processed data: {summary.processed_path}")
+    if summary.rejected_path:
+        print(f"Rejected data:  {summary.rejected_path}")
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
     setup_logging()
-    logger.info("Collector started")
+    logger.info(
+        "Collector started (limit=%d, currency=%s, dry_run=%s)",
+        args.limit, args.currency, args.dry_run,
+    )
 
     try:
-        config.validate_config()
-
-        # 1) fetch
-        with CoinGeckoClient() as client:
-            raw_coins = client.get_markets(per_page=5)
-        collected_at = utc_now()
-
-        # 2) save raw immediately
-        raw_path = save_raw_json(raw_coins, collected_at)
-
-        # 3) validate (save rejects BEFORE the quality check)
-        report = validate_batch(raw_coins)
-        save_rejected_json(report.rejected, collected_at)
-        ensure_quality(report)
-
-        # 4) clean and save
-        coins = clean_batch(report.valid, collected_at)
-        csv_path = save_processed_csv(coins, collected_at)
-
+        summary = run_pipeline(
+            limit=args.limit, currency=args.currency, dry_run=args.dry_run
+        )
     except CollectorError as exc:
         logger.error("Collection failed: %s", exc)
-        return 1
+        return ExitCode.FAILURE
     except Exception:
         logger.exception("Unexpected error")
-        return 2
+        return ExitCode.UNEXPECTED
 
-    logger.info("Collector finished successfully (%d coins)", len(coins))
-    print_summary(coins[:10])
-    print(f"\nRaw data:       {raw_path}")
-    print(f"Processed data: {csv_path}")
-    return 0
+    print_report(summary)
+    return ExitCode.OK
 
 
 if __name__ == "__main__":
