@@ -22,7 +22,7 @@ class CoinRecord:
         """Convert to a plain dict with ISO 8601 Strings"""
         data = asdict(self)
         for key in ("last_update", "collected_at"):
-            if data[key] is not None:
+            if data.get(key) is not None:
                 data[key] = data[key].isoformat()
             return data
 

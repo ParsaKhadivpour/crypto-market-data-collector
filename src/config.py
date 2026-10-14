@@ -20,6 +20,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 LOG_DIR = BASE_DIR / "logs"
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
+DATA_DIR = BASE_DIR / "data"
+RAW_DIR = DATA_DIR / "raw"
+PROCESSED_DIR = DATA_DIR / "processed"
+REJECTED_DIR = DATA_DIR / "rejected"
+
 def validate_config() -> None:
     """Fail fast if a required setting is missing"""
     if not API_KEY:

@@ -16,3 +16,7 @@ class APIResponseError(CollectorError):
 
 class DataValidationError(CollectorError):
     """Too much of the incoming data is invalid"""
+
+class StorageError(CollectorError):
+    """A file could not be written or read"""
+    
