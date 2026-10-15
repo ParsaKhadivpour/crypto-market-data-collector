@@ -1,6 +1,5 @@
 # Crypto Market Data Collector
 
-[![tests](https://github.com/ParsaKhadivpour/crypto-market-data-collector/actions/workflows/tests.yml/badge.svg)](https://github.com/ParsaKhadivpour/crypto-market-data-collector/actions)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 
 A small, ETL pipeline in Python: it fetches market data for the top
